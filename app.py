@@ -55,11 +55,9 @@ st.markdown("""
     }
     /* Headers */
     h1 {
-        background: -webkit-linear-gradient(45deg, #00D2FF, #3A7BD5);
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-        font-weight: 900;
-        letter-spacing: -1px;
+        color: #FFFFFF;
+        font-weight: 700;
+        letter-spacing: -0.5px;
     }
     h2, h3 {
         color: #C9D1D9 !important;
@@ -79,24 +77,23 @@ st.markdown("""
     }
     /* Buttons */
     .stButton>button {
-        background: linear-gradient(90deg, #FF4B2B 0%, #FF416C 100%);
+        background-color: #238636;
         color: white;
         border: none;
-        border-radius: 10px;
-        font-weight: 700;
-        padding: 10px 20px;
-        transition: all 0.3s ease;
+        border-radius: 6px;
+        font-weight: 600;
+        padding: 8px 16px;
+        transition: all 0.2s ease;
     }
     .stButton>button:hover {
-        background: linear-gradient(90deg, #FF416C 0%, #FF4B2B 100%);
-        box-shadow: 0 4px 15px rgba(255, 75, 43, 0.4);
-        transform: scale(1.02);
+        background-color: #2EA043;
+        color: white;
     }
     /* Expanders & Dividers */
     .stExpander {
         background-color: #161A22;
         border: 1px solid #30363D;
-        border-radius: 10px;
+        border-radius: 8px;
     }
     hr {
         border-color: #30363D;
@@ -110,8 +107,8 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-st.title("📊 AI Business Intelligence Agent")
-st.markdown("**Real-time Insights from Monday.com Work Orders & Deals**")
+st.title("Business Intelligence Dashboard")
+st.markdown("Live Monday.com Operations & Pipeline Analytics")
 
 import concurrent.futures
 
@@ -153,28 +150,41 @@ main_col, side_col = st.columns([2, 1])
 
 # --- Chat Interface ---
 with main_col:
-    st.subheader("💬 Ask the AI BI Agent")
-    st.markdown("Example questions: *'Which sector generates the highest revenue?'* or *'What is our work order completion rate?'*")
-    
-    query = st.text_input("Enter your business question:", placeholder="e.g. How is our pipeline looking this quarter?")
-    
-    if query:
+    # Initialize chat history
+    if "messages" not in st.session_state:
+        st.session_state.messages = []
+
+    # Display chat messages from history on app rerun
+    for message in st.session_state.messages:
+        with st.chat_message(message["role"]):
+            st.markdown(message["content"])
+
+    # React to user input
+    if query := st.chat_input("Ask a business question... (e.g. 'What is our expected revenue?')"):
+        # Display user message in chat message container
+        st.chat_message("user").markdown(query)
+        # Add user message to chat history
+        st.session_state.messages.append({"role": "user", "content": query})
+
         # Pre-filter large text columns to save huge amounts of tokens
         compact_deals = deals_df.drop(columns=[c for c in deals_df.columns if 'id' in c.lower()], errors='ignore').head(50)
         compact_wo = wo_df.drop(columns=[c for c in wo_df.columns if 'id' in c.lower()], errors='ignore').head(50)
         
         agent = get_ai_agent(compact_deals, compact_wo)
         if agent:
-            with st.spinner("🧠 Analyzing Monday.com Data..."):
-                answer = ask_agent(agent, query)
-                st.info(answer)
+            with st.chat_message("assistant"):
+                with st.spinner("Analyzing..."):
+                    answer = ask_agent(agent, query)
+                    st.markdown(answer)
+            # Add assistant response to chat history
+            st.session_state.messages.append({"role": "assistant", "content": answer})
         else:
             st.error("Missing Groq API Key. Add GROQ_API_KEY to your Streamlit secrets or local .env file.")
 
 # --- Action Panel ---
 with side_col:
-    st.subheader("📑 Quick Actions")
-    if st.button("🚀 Generate Leadership Summary", type="primary", use_container_width=True):
+    st.subheader("Quick Actions")
+    if st.button("Generate Leadership Summary", type="primary", use_container_width=True):
         st.write("**Executive Summary:**")
         if metrics:
             with st.spinner("Generating executive insights..."):
