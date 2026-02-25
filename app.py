@@ -108,8 +108,7 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-st.title("Business Intelligence Dashboard")
-st.markdown("Live Monday.com Operations & Pipeline Analytics")
+st.title("🤖 Enterprise Business Chatbot")
 
 import concurrent.futures
 
@@ -137,13 +136,6 @@ except Exception as e:
     st.error(f"Critical error loading data: {str(e)}")
     deals_df, wo_df, metrics = pd.DataFrame(), pd.DataFrame(), {}
 
-# Top Dashboard Metrics
-col1, col2, col3, col4 = st.columns(4)
-col1.metric("💰 Total Pipeline Value", f"${metrics.get('Total Pipeline Value', 0):,.2f}")
-col2.metric("🎯 Expected Revenue", f"${metrics.get('Expected Revenue', 0):,.2f}")
-col3.metric("📋 Work Order Completion", metrics.get('Work Order Completion Rate', '0%'))
-col4.metric("👑 Top Sector", metrics.get('Top Sector', 'Unknown'))
-
 st.divider()
 
 # Left Column (Chat) and Right Column (Summary & Data)
@@ -151,36 +143,33 @@ main_col, side_col = st.columns([2, 1])
 
 # --- Chat Interface ---
 with main_col:
-    # Initialize chat history
     if "messages" not in st.session_state:
         st.session_state.messages = []
 
-    # Display chat messages from history on app rerun
-    for message in st.session_state.messages:
-        with st.chat_message(message["role"]):
-            st.markdown(message["content"])
+    with st.form(key="chat_form", clear_on_submit=True):
+        query = st.text_input("Ask a business question:", placeholder="e.g. Which deal has highest value or Which sector performs best?")
+        submit_button = st.form_submit_button("Send Question")
 
-    # React to user input
-    if query := st.chat_input("Ask a business question... (e.g. 'What is our expected revenue?')"):
-        # Display user message in chat message container
-        st.chat_message("user").markdown(query)
-        # Add user message to chat history
-        st.session_state.messages.append({"role": "user", "content": query})
-
+    if submit_button and query:
         # Pre-filter large text columns to save huge amounts of tokens
         compact_deals = deals_df.drop(columns=[c for c in deals_df.columns if 'id' in c.lower()], errors='ignore').head(50)
         compact_wo = wo_df.drop(columns=[c for c in wo_df.columns if 'id' in c.lower()], errors='ignore').head(50)
         
         agent = get_ai_agent(compact_deals, compact_wo)
         if agent:
-            with st.chat_message("assistant"):
-                with st.spinner("Analyzing..."):
-                    answer = ask_agent(agent, query)
-                    st.markdown(answer)
-            # Add assistant response to chat history
-            st.session_state.messages.append({"role": "assistant", "content": answer})
+            with st.spinner("Analyzing..."):
+                answer = ask_agent(agent, query)
+                
+            # Insert the newly answered question and response at the VERY TOP of the history list
+            st.session_state.messages.insert(0, {"role": "assistant", "content": answer})
+            st.session_state.messages.insert(0, {"role": "user", "content": query})
         else:
             st.error("Missing Groq API Key. Add GROQ_API_KEY to your Streamlit secrets or local .env file.")
+
+    st.markdown("#### Conversation History")
+    for message in st.session_state.messages:
+        with st.chat_message(message["role"]):
+            st.markdown(message["content"])
 
 # --- Action Panel ---
 with side_col:
