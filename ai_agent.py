@@ -15,7 +15,7 @@ def get_ai_agent(deals_df, wo_df):
     """
     return deals_df, wo_df
 
-def ask_agent(agent_data, query):
+def ask_agent(agent_data, query, chat_history=None):
     deals_df, wo_df = agent_data
     api_key = get_ai_key()
     
@@ -72,12 +72,25 @@ def ask_agent(agent_data, query):
             if sector_col:
                 wo_summary += f"- Project Count grouped by Sector:\n{wo_df[sector_col].value_counts().to_string()}\n"
 
+        # ⚡ CONVERSATIONAL MEMORY ⚡
+        # Parse the Streamlit session state messages to retain context for follow-up questions
+        history_text = ""
+        if chat_history:
+            history_text = "Recent Conversation Context:\n"
+            # The list in app.py is sorted newest-first, so we reverse a slice of it to give chronological context
+            recent_msgs = chat_history[:6] # Grab last 6 messages
+            for msg in reversed(recent_msgs):
+                role = "User" if msg["role"] == "user" else "AI"
+                history_text += f"{role}: {msg['content']}\n"
+
         prompt = f"""
 You are an expert AI Business Intelligence Agent. Answer founder-level business questions using ONLY the following real-time aggregated data calculated from Monday.com boards.
 
 {deals_summary}
 
 {wo_summary}
+
+{history_text}
 
 User Question: {query}
 
@@ -120,7 +133,8 @@ Expected Revenue: {metrics.get('Expected Revenue', 0)}
 Top Sector: {metrics.get('Top Sector', 'Unknown')}
 Work Order Completion Rate: {metrics.get('Work Order Completion Rate', '0%')}
 
-Format clearly with emojis. Identify one hypothetical operational risk based on these metrics.
+Format clearly with emojis. Identify one hypothetical operational risk based on these metrics. 
+Important: The numbers you are receiving have already been validated for 100% accuracy. Do not do any math. Copy the numbers exactly as they appear in the values above.
 """
         response = llm.invoke(prompt)
         return response.content

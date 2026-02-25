@@ -158,7 +158,7 @@ with main_col:
         agent = get_ai_agent(compact_deals, compact_wo)
         if agent:
             with st.spinner("Analyzing..."):
-                answer = ask_agent(agent, query)
+                answer = ask_agent(agent, query, st.session_state.messages)
                 
             # Insert the newly answered question and response at the VERY TOP of the history list
             st.session_state.messages.insert(0, {"role": "assistant", "content": answer})

@@ -1,5 +1,6 @@
 import pandas as pd
 import numpy as np
+import re
 
 def clean_currency(val):
     if pd.isna(val) or val == 'Unknown':
@@ -36,9 +37,10 @@ def process_data(df, board_type="deals"):
         # We can keep them as datetime or formatted strings; Let's format as YYYY-MM-DD
         df[c] = df[c].dt.strftime('%Y-%m-%d').fillna('Unknown')
 
-    # Normalize Revenue -> numeric
+    # Normalize Revenue -> numeric using robust pandas numeric coercing
     for c in currency_cols:
-        df[c] = df[c].apply(clean_currency)
+        df[c] = df[c].astype(str).apply(lambda x: re.sub(r'[^\d.-]', '', x))
+        df[c] = pd.to_numeric(df[c], errors='coerce').fillna(0.0)
 
     # Normalize Sector names -> standardized Title case
     for c in sector_cols:
