@@ -33,13 +33,14 @@ def fetch_board_data(board_id):
     query ($boardId: [ID!], $cursor: String) {
       boards(ids: $boardId) {
         name
-        items_page(limit: 100, cursor: $cursor) {
+        items_page(limit: 500, cursor: $cursor) {
           cursor
           items {
             id
             name
             column_values {
               id
+
               text
               type
               value

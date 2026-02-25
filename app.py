@@ -49,11 +49,18 @@ st.markdown("""
 st.title("📊 AI Business Intelligence Agent")
 st.markdown("**Real-time Insights from Monday.com Work Orders & Deals**")
 
+import concurrent.futures
+
 @st.cache_data(ttl=300) # Cache for 5 mins to prevent API spamming
 def load_and_clean_monday_data():
-    with st.spinner("Fetching live data from Monday.com GraphQL API..."):
-        deals_raw = fetch_board_data(DEALS_BOARD_ID)
-        wo_raw = fetch_board_data(WO_BOARD_ID)
+    with st.spinner("Fetching live data from Monday.com GraphQL API concurrently..."):
+        # Fetch both boards simultaneously to cut loading time in half
+        with concurrent.futures.ThreadPoolExecutor() as executor:
+            future_deals = executor.submit(fetch_board_data, DEALS_BOARD_ID)
+            future_wo = executor.submit(fetch_board_data, WO_BOARD_ID)
+            
+            deals_raw = future_deals.result()
+            wo_raw = future_wo.result()
 
         deals_clean = process_data(deals_raw, board_type="deals")
         wo_clean = process_data(wo_raw, board_type="work_orders")
