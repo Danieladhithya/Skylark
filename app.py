@@ -20,28 +20,92 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# Apply sleek styling
+# Apply sleek, premium dark-mode styling
 st.markdown("""
     <style>
-    .stMetric {
-        background-color: #f8f9fa;
-        padding: 15px;
-        border-radius: 10px;
-        border-left: 5px solid #0052cc;
-        box-shadow: 2px 2px 5px rgba(0,0,0,0.05);
+    /* Main Background & Text */
+    .stApp {
+        background-color: #0E1117;
+        color: #FAFAFA;
     }
-    .stMetric label {
-        color: #5e6c84 !important;
-        font-weight: 600;
-        font-size: 14px;
+    /* Metric Cards */
+    div[data-testid="stMetric"] {
+        background: linear-gradient(145deg, #1E212B, #161A22);
+        padding: 20px;
+        border-radius: 15px;
+        border: 1px solid #30363D;
+        border-left: 5px solid #00D2FF;
+        box-shadow: 0 8px 16px rgba(0,0,0,0.4);
+        transition: transform 0.2s, box-shadow 0.2s;
     }
-    .stMetric .metric-value {
-        color: #172b4d !important;
+    div[data-testid="stMetric"]:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 12px 20px rgba(0, 210, 255, 0.15);
+    }
+    div[data-testid="stMetric"] label {
+        color: #8B949E !important;
+        font-weight: 500;
+        font-size: 15px;
+        letter-spacing: 0.5px;
+    }
+    div[data-testid="stMetric"] div {
+        color: #FFFFFF !important;
         font-weight: 800;
-        font-size: 28px;
+        font-size: 32px;
     }
+    /* Headers */
     h1 {
-        color: #0052cc;
+        background: -webkit-linear-gradient(45deg, #00D2FF, #3A7BD5);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        font-weight: 900;
+        letter-spacing: -1px;
+    }
+    h2, h3 {
+        color: #C9D1D9 !important;
+        font-weight: 600;
+    }
+    /* Inputs */
+    .stTextInput input {
+        border-radius: 10px;
+        border: 1px solid #30363D;
+        background-color: #161A22;
+        color: #FFFFFF;
+        padding: 10px 15px;
+    }
+    .stTextInput input:focus {
+        border-color: #00D2FF;
+        box-shadow: 0 0 5px rgba(0, 210, 255, 0.5);
+    }
+    /* Buttons */
+    .stButton>button {
+        background: linear-gradient(90deg, #FF4B2B 0%, #FF416C 100%);
+        color: white;
+        border: none;
+        border-radius: 10px;
+        font-weight: 700;
+        padding: 10px 20px;
+        transition: all 0.3s ease;
+    }
+    .stButton>button:hover {
+        background: linear-gradient(90deg, #FF416C 0%, #FF4B2B 100%);
+        box-shadow: 0 4px 15px rgba(255, 75, 43, 0.4);
+        transform: scale(1.02);
+    }
+    /* Expanders & Dividers */
+    .stExpander {
+        background-color: #161A22;
+        border: 1px solid #30363D;
+        border-radius: 10px;
+    }
+    hr {
+        border-color: #30363D;
+    }
+    /* Info / Success boxes */
+    div.stAlert {
+        border-radius: 10px;
+        border: 1px solid #30363D;
+        background-color: #1E212B;
     }
     </style>
 """, unsafe_allow_html=True)
