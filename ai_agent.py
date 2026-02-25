@@ -15,7 +15,18 @@ def get_ai_agent(deals_df, wo_df):
     """
     return deals_df, wo_df
 
-def ask_agent(agent_data, query, chat_history=None):
+def classify_intent(question):
+    q = question.lower()
+    if any(k in q for k in ["work order", "work orders", "orders", "execution", "project status"]):
+        return "work_orders"
+    elif any(k in q for k in ["sector", "best sector", "worst sector"]):
+        return "sector"
+    elif any(k in q for k in ["revenue", "pipeline", "deal value", "sector performance", "pipeline value"]):
+        return "deals"
+    else:
+        return "general"
+
+def ask_agent(agent_data, query):
     deals_df, wo_df = agent_data
     api_key = get_ai_key()
     
@@ -29,12 +40,12 @@ def ask_agent(agent_data, query, chat_history=None):
             groq_api_key=api_key
         )
         
-        # ⚡ DYNAMIC TOKEN-EFFICIENT DATA AGGREGATION ⚡
-        # Instead of sending 100 rows of raw text (3000+ tokens), we calculate
-        # the exact grouped pivots in pandas (using ~100 tokens), preventing rate limits!
+        intent = classify_intent(query)
         
-        deals_summary = "Deals Board Stats:\n"
-        if not deals_df.empty:
+        # ⚡ DYNAMIC TOKEN-EFFICIENT DATA AGGREGATION ⚡
+        deals_summary = ""
+        if intent in ["deals", "sector", "general"] and not deals_df.empty:
+            deals_summary = "Deals & Revenue Stats:\n"
             val_col = [c for c in deals_df.columns if any(x in c.lower() for x in ['revenue', 'value', 'amount'])]
             val_col = val_col[0] if val_col else None
             stage_col = [c for c in deals_df.columns if 'stage' in c.lower() or 'status' in c.lower()]
@@ -60,8 +71,9 @@ def ask_agent(agent_data, query, chat_history=None):
                 grouped_sector = deals_df.groupby(sector_col)[val_col].sum().apply(lambda x: f"${x:,.2f}")
                 deals_summary += f"- Revenue grouped by Sector:\n{grouped_sector.to_string()}\n"
         
-        wo_summary = "Work Orders Stats:\n"
-        if not wo_df.empty:
+        wo_summary = ""
+        if intent in ["work_orders", "general"] and not wo_df.empty:
+            wo_summary = "Work Orders Stats:\n"
             status_col = [c for c in wo_df.columns if 'status' in c.lower()]
             status_col = status_col[0] if status_col else None
             if status_col:
@@ -72,25 +84,12 @@ def ask_agent(agent_data, query, chat_history=None):
             if sector_col:
                 wo_summary += f"- Project Count grouped by Sector:\n{wo_df[sector_col].value_counts().to_string()}\n"
 
-        # ⚡ CONVERSATIONAL MEMORY ⚡
-        # Parse the Streamlit session state messages to retain context for follow-up questions
-        history_text = ""
-        if chat_history:
-            history_text = "Recent Conversation Context:\n"
-            # The list in app.py is sorted newest-first, so we reverse a slice of it to give chronological context
-            recent_msgs = chat_history[:6] # Grab last 6 messages
-            for msg in reversed(recent_msgs):
-                role = "User" if msg["role"] == "user" else "AI"
-                history_text += f"{role}: {msg['content']}\n"
-
         prompt = f"""
 You are a highly professional AI Business Intelligence Agent. Answer the founder-level business question using ONLY the provided real-time data calculated from Monday.com boards.
 
 {deals_summary}
 
 {wo_summary}
-
-{history_text}
 
 User Question: {query}
 

@@ -147,9 +147,6 @@ main_col, side_col = st.columns([2, 1])
 
 # --- Chat Interface ---
 with main_col:
-    if "messages" not in st.session_state:
-        st.session_state.messages = []
-
     with st.form(key="chat_form", clear_on_submit=True):
         query = st.text_input("Ask a business question:", placeholder="e.g. Which deal has highest value or Which sector performs best?")
         submit_button = st.form_submit_button("Send Question")
@@ -162,23 +159,19 @@ with main_col:
         agent = get_ai_agent(compact_deals, compact_wo)
         if agent:
             with st.spinner("Analyzing..."):
-                answer = ask_agent(agent, query, st.session_state.messages)
+                answer = ask_agent(agent, query)
                 
-            # Replace the history with only the current session memory up to last 4 queries
-            st.session_state.messages.insert(0, {"role": "assistant", "content": answer})
-            st.session_state.messages.insert(0, {"role": "user", "content": query})
-            
-            # Trim memory to prevent context contamination
-            if len(st.session_state.messages) > 6:
-                st.session_state.messages = st.session_state.messages[:6]
+            st.session_state.last_query = query
+            st.session_state.last_answer = answer
         else:
             st.error("Missing Groq API Key. Add GROQ_API_KEY to your Streamlit secrets or local .env file.")
 
-    if st.session_state.messages:
-        st.markdown("#### Recent Conversation")
-        for message in st.session_state.messages:
-            with st.chat_message(message["role"]):
-                st.markdown(message["content"])
+    if 'last_answer' in st.session_state:
+        st.markdown("#### Latest Response")
+        with st.chat_message("user"):
+            st.markdown(st.session_state.last_query)
+        with st.chat_message("assistant"):
+            st.markdown(st.session_state.last_answer)
 
 # --- Action Panel ---
 with side_col:
