@@ -17,11 +17,11 @@ def get_ai_agent(deals_df, wo_df):
     if not api_key:
         return None
 
-    # Using Groq's fast Llama 3 model (Free Tier)
+    # Using Groq's fast supported Llama 3 model (Free Tier)
     try:
         llm = ChatGroq(
             temperature=0, 
-            model_name="llama3-70b-8192", 
+            model_name="llama-3.3-70b-versatile", 
             groq_api_key=api_key
         )
     except Exception as e:
