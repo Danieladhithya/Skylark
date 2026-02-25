@@ -1,7 +1,6 @@
 import os
 import streamlit as st
 from langchain_groq import ChatGroq
-from langchain_experimental.agents.agent_toolkits import create_pandas_dataframe_agent
 
 def get_ai_key():
     try:
@@ -11,58 +10,79 @@ def get_ai_key():
 
 def get_ai_agent(deals_df, wo_df):
     """
-    Creates an intelligent Pandas Agent combining both boards using Groq.
+    Instead of passing the entire dataframe to a heavy Langchain agent (which burns through 
+    Free Tier API token limits instantly), we pass the dataframes to be summarized dynamically.
     """
-    api_key = get_ai_key()
-    if not api_key:
-        return None
+    return deals_df, wo_df
 
-    # Using a lighter, highly available model to avoid token limits.
+def ask_agent(agent_data, query):
+    deals_df, wo_df = agent_data
+    api_key = get_ai_key()
+    
+    if not api_key:
+        return "⚠️ GROQ_API_KEY is missing or invalid. Please configure it in .env or Streamlit Secrets."
+
     try:
         llm = ChatGroq(
             temperature=0, 
             model_name="llama-3.1-8b-instant", 
             groq_api_key=api_key
         )
-    except Exception as e:
-        return None
+        
+        # ⚡ DYNAMIC TOKEN-EFFICIENT DATA AGGREGATION ⚡
+        # Instead of sending 100 rows of raw text (3000+ tokens), we calculate
+        # the exact grouped pivots in pandas (using ~100 tokens), preventing rate limits!
+        
+        deals_summary = "Deals Board Stats:\n"
+        if not deals_df.empty:
+            val_col = [c for c in deals_df.columns if any(x in c.lower() for x in ['revenue', 'value', 'amount'])]
+            val_col = val_col[0] if val_col else None
+            stage_col = [c for c in deals_df.columns if 'stage' in c.lower() or 'status' in c.lower()]
+            stage_col = stage_col[0] if stage_col else None
+            sector_col = [c for c in deals_df.columns if 'sector' in c.lower() or 'industry' in c.lower()]
+            sector_col = sector_col[0] if sector_col else None
 
-    prefix = """
-You are an expert AI Business Intelligence Agent. Your goal is to answer founder-level business questions using real-time data from Monday.com boards.
-You have access to two pandas dataframes:
-df1: Deals Board Data (contains pipeline, expected revenue, stage, sector)
-df2: Work Orders Board Data (contains project status, sector, timeline)
+            if val_col: 
+                deals_summary += f"- Total Pipeline Sum: ${deals_df[val_col].sum():,.2f}\n"
+            if val_col and stage_col:
+                deals_summary += f"- Revenue grouped by Stage:\n{deals_df.groupby(stage_col)[val_col].sum().to_string()}\n"
+            if val_col and sector_col:
+                deals_summary += f"- Revenue grouped by Sector:\n{deals_df.groupby(sector_col)[val_col].sum().to_string()}\n"
+        
+        wo_summary = "Work Orders Stats:\n"
+        if not wo_df.empty:
+            status_col = [c for c in wo_df.columns if 'status' in c.lower()]
+            status_col = status_col[0] if status_col else None
+            if status_col:
+                wo_summary += f"- Project Count grouped by Status:\n{wo_df[status_col].value_counts().to_string()}\n"
+                
+            sector_col = [c for c in wo_df.columns if 'sector' in c.lower() or 'industry' in c.lower()]
+            sector_col = sector_col[0] if sector_col else None
+            if sector_col:
+                wo_summary += f"- Project Count grouped by Sector:\n{wo_df[sector_col].value_counts().to_string()}\n"
 
-Rules for Accuracy:
-- Only return answers backed by exact data available in these frames.
-- Do NOT hallucinate numbers or make up data.
-- Provide insights, merging contexts when asked about revenue vs execution.
-- If data is too sparse or missing to calculate, say "Data incomplete for this analysis".
+        prompt = f"""
+You are an expert AI Business Intelligence Agent. Answer founder-level business questions using ONLY the following real-time aggregated data calculated from Monday.com boards.
+
+{deals_summary}
+
+{wo_summary}
+
+User Question: {query}
+
+Rules:
+- Provide insights, merging contexts when requested.
+- If data is missing to answer the question, say "Data incomplete for this analysis."
+- Do NOT hallucinate numbers. Use the exact sums provided above.
 """
-
-    try:
-        agent = create_pandas_dataframe_agent(
-            llm,
-            [deals_df, wo_df],
-            verbose=False,
-            allow_dangerous_code=True,
-            prefix=prefix
-        )
-        return agent
-    except Exception as e:
-        return None
-
-def ask_agent(agent, query):
-    if not agent:
-        return "⚠️ GROQ_API_KEY is missing or invalid. Please configure it in .env or Streamlit Secrets."
-    try:
-        response = agent.invoke({"input": query})
-        return response['output']
+        response = llm.invoke(prompt)
+        return response.content
+        
     except Exception as e:
         return f"🚨 Analysis Error: {str(e)}"
 
 def generate_executive_summary(metrics):
-    """Generates an executive summary using minimal tokens, bypassing the pandas agent."""
+    """Generates an executive summary using minimal tokens."""
     api_key = get_ai_key()
     if not api_key:
         return "⚠️ GROQ_API_KEY is missing or invalid. Please configure it in .env or Streamlit Secrets."
@@ -75,15 +95,15 @@ def generate_executive_summary(metrics):
         )
         
         prompt = f"""
-        You are an AI Business Intelligence Analyst.
-        Generate a very concise 5-bullet executive Leadership Summary using this exact data:
-        Total Pipeline: {metrics.get('Total Pipeline Value', 0)}
-        Expected Revenue: {metrics.get('Expected Revenue', 0)}
-        Top Sector: {metrics.get('Top Sector', 'Unknown')}
-        Work Order Completion: {metrics.get('Work Order Completion Rate', '0%')}
-        
-        Format clearly with emojis. Do not hallucinate numbers. Identify one hypothetical operational risk based on these metrics.
-        """
+You are an AI Business Intelligence Analyst.
+Generate a very concise 5-bullet executive Leadership Summary using this exact data:
+Total Pipeline: {metrics.get('Total Pipeline Value', 0)}
+Expected Revenue: {metrics.get('Expected Revenue', 0)}
+Top Sector: {metrics.get('Top Sector', 'Unknown')}
+Work Order Completion Rate: {metrics.get('Work Order Completion Rate', '0%')}
+
+Format clearly with emojis. Identify one hypothetical operational risk based on these metrics.
+"""
         response = llm.invoke(prompt)
         return response.content
     except Exception as e:
