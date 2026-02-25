@@ -94,7 +94,7 @@ with main_col:
                 answer = ask_agent(agent, query)
                 st.info(answer)
         else:
-            st.error("Missing OpenAI API Key. Add OPENAI_API_KEY to your Streamlit secrets or local .env file.")
+            st.error("Missing Groq API Key. Add GROQ_API_KEY to your Streamlit secrets or local .env file.")
 
 # --- Action Panel ---
 with side_col:
@@ -117,7 +117,7 @@ with side_col:
                     summary = ask_agent(agent, prompt)
                     st.success(summary)
             else:
-                st.error("OpenAI API Key needed for AI Summary.")
+                st.error("Groq API Key needed for AI Summary.")
         else:
             st.warning("Insufficient data to generate summary.")
 
