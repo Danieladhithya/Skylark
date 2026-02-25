@@ -130,11 +130,15 @@ def load_and_clean_monday_data():
 
         return deals_clean, wo_clean, metrics
 
-try:
-    deals_df, wo_df, metrics = load_and_clean_monday_data()
-except Exception as e:
-    st.error(f"Critical error loading data: {str(e)}")
-    deals_df, wo_df, metrics = pd.DataFrame(), pd.DataFrame(), {}
+if 'deals_df' not in st.session_state or 'wo_df' not in st.session_state or 'metrics' not in st.session_state:
+    try:
+        deals_df, wo_df, metrics = load_and_clean_monday_data()
+        st.session_state.deals_df = deals_df
+        st.session_state.wo_df = wo_df
+        st.session_state.metrics = metrics
+    except Exception as e:
+        st.error(f"Critical error loading data: {str(e)}")
+        st.session_state.deals_df, st.session_state.wo_df, st.session_state.metrics = pd.DataFrame(), pd.DataFrame(), {}
 
 st.divider()
 
@@ -152,33 +156,38 @@ with main_col:
 
     if submit_button and query:
         # Pre-filter large text columns to save huge amounts of tokens
-        compact_deals = deals_df.drop(columns=[c for c in deals_df.columns if 'id' in c.lower()], errors='ignore').head(50)
-        compact_wo = wo_df.drop(columns=[c for c in wo_df.columns if 'id' in c.lower()], errors='ignore').head(50)
+        compact_deals = st.session_state.deals_df.drop(columns=[c for c in st.session_state.deals_df.columns if 'id' in c.lower()], errors='ignore').head(50)
+        compact_wo = st.session_state.wo_df.drop(columns=[c for c in st.session_state.wo_df.columns if 'id' in c.lower()], errors='ignore').head(50)
         
         agent = get_ai_agent(compact_deals, compact_wo)
         if agent:
             with st.spinner("Analyzing..."):
                 answer = ask_agent(agent, query, st.session_state.messages)
                 
-            # Insert the newly answered question and response at the VERY TOP of the history list
+            # Replace the history with only the current session memory up to last 4 queries
             st.session_state.messages.insert(0, {"role": "assistant", "content": answer})
             st.session_state.messages.insert(0, {"role": "user", "content": query})
+            
+            # Trim memory to prevent context contamination
+            if len(st.session_state.messages) > 6:
+                st.session_state.messages = st.session_state.messages[:6]
         else:
             st.error("Missing Groq API Key. Add GROQ_API_KEY to your Streamlit secrets or local .env file.")
 
-    st.markdown("#### Conversation History")
-    for message in st.session_state.messages:
-        with st.chat_message(message["role"]):
-            st.markdown(message["content"])
+    if st.session_state.messages:
+        st.markdown("#### Recent Conversation")
+        for message in st.session_state.messages:
+            with st.chat_message(message["role"]):
+                st.markdown(message["content"])
 
 # --- Action Panel ---
 with side_col:
     st.subheader("Quick Actions")
     if st.button("Generate Leadership Summary", type="primary", use_container_width=True):
         st.write("**Executive Summary:**")
-        if metrics:
+        if st.session_state.metrics:
             with st.spinner("Generating executive insights..."):
-                summary = generate_executive_summary(metrics)
+                summary = generate_executive_summary(st.session_state.metrics)
                 if "⚠️" in summary or "🚨" in summary:
                     st.error(summary)
                 else:

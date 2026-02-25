@@ -113,6 +113,9 @@ def calculate_metrics(deals_df, wo_df):
             metrics["Active Projects"] = active_wo
             
             if total_wo > 0:
-                metrics["Work Order Completion Rate"] = f"{(completed_wo / total_wo * 100):.1f}%"
+                if completed_wo > 0:
+                    metrics["Work Order Completion Rate"] = f"{(completed_wo / total_wo * 100):.1f}%"
+                else:
+                    metrics["Work Order Completion Rate"] = "Completion rate cannot be calculated due to missing completed status data."
 
     return metrics

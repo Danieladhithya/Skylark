@@ -84,7 +84,7 @@ def ask_agent(agent_data, query, chat_history=None):
                 history_text += f"{role}: {msg['content']}\n"
 
         prompt = f"""
-You are an expert AI Business Intelligence Agent. Answer founder-level business questions using ONLY the following real-time aggregated data calculated from Monday.com boards.
+You are a highly professional AI Business Intelligence Agent. Answer the founder-level business question using ONLY the provided real-time data calculated from Monday.com boards.
 
 {deals_summary}
 
@@ -94,17 +94,17 @@ You are an expert AI Business Intelligence Agent. Answer founder-level business 
 
 User Question: {query}
 
-Rules:
-1. Provide a direct, factual answer first. Format clearly.
-2. If asked to sum or show revenue across sectors, format the answer like this:
+CRITICAL RULES:
+1. INTENT ISOLATION: Identify the exact intent of the query (Pipeline, Revenue, Work Orders, Sectors). Answer ONLY that specific question using ONLY the relevant data block. DO NOT append additional metrics, previous answers, or unrelated stats.
+2. MEMORY USAGE: Use the "Recent Conversation Context" ONLY to understand pronouns or follow-up references. DO NOT automatically reuse or repeat previous answers.
+3. FORMATTING: Provide a direct, factual answer first. Be extremely concise. No fluffy intros.
+4. EXACT MATH: Do NOT perform manual math operations. Copy the exact pre-calculated sums provided above.
+5. SUMMATIONS: If asked to sum or show revenue across sectors, format strictly as:
    Sector A = $#,###
    Sector B = $#,###
    -------------------
    Total Revenue = $#,###
-3. Be extremely concise. Do not write long generic explanations.
-4. Use a highly professional tone. No fluffy intros.
-5. If asked about the "highest", "top", or a specific client, respond directly using the "Top 5 Deals" list provided above.
-6. Do NOT do manual decimal math. Use the exact text/numbers provided in the summary above exactly as they appear.
+6. MISSING DATA: If data is missing to answer the exact question, respond strictly: "Data incomplete for this analysis."
 """
         response = llm.invoke(prompt)
         return response.content
