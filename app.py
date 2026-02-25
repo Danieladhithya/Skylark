@@ -51,7 +51,8 @@ st.markdown("""
     div[data-testid="stMetric"] div {
         color: #FFFFFF !important;
         font-weight: 800;
-        font-size: 32px;
+        font-size: 24px;
+        white-space: nowrap;
     }
     /* Headers */
     h1 {
@@ -196,18 +197,4 @@ with side_col:
         else:
             st.warning("Insufficient data to generate summary.")
 
-st.divider()
-
-# --- Raw Data Review ---
-with st.expander("🔍 View Live Processed Data"):
-    st.write("### 💼 Deals Pipeline (Cleaned)")
-    if not deals_df.empty:
-        st.dataframe(deals_df, use_container_width=True)
-    else:
-        st.warning("No data retrieved from Deals Board.")
-        
-    st.write("### 🛠️ Work Orders (Cleaned)")
-    if not wo_df.empty:
-        st.dataframe(wo_df, use_container_width=True)
-    else:
-        st.warning("No data retrieved from Work Orders Board.")
+# End of App

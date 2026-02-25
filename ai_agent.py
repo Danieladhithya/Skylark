@@ -43,9 +43,18 @@ def ask_agent(agent_data, query):
             sector_col = sector_col[0] if sector_col else None
 
             if val_col: 
-                deals_summary += f"- Total Pipeline Sum: ${deals_df[val_col].sum():,.2f}\n"
+                deals_summary += f"- Total Pipeline Sum: ${deals_df[val_col].sum():,.2f}\n\n"
+                deals_summary += "Top 5 Deals (Highest Value):\n"
+                top_deals = deals_df.nlargest(5, val_col)
+                for _, row in top_deals.iterrows():
+                    client = row.get('Item Name', 'Unknown')
+                    val = row.get(val_col, 0)
+                    stg = row.get(stage_col, 'Unknown') if stage_col else 'Unknown'
+                    sect = row.get(sector_col, 'Unknown') if sector_col else 'Unknown'
+                    deals_summary += f"- Client: {client} | Value: ${val:,.2f} | Stage: {stg} | Sector: {sect}\n"
+                
             if val_col and stage_col:
-                deals_summary += f"- Revenue grouped by Stage:\n{deals_df.groupby(stage_col)[val_col].sum().to_string()}\n"
+                deals_summary += f"\n- Revenue grouped by Stage:\n{deals_df.groupby(stage_col)[val_col].sum().to_string()}\n"
             if val_col and sector_col:
                 deals_summary += f"- Revenue grouped by Sector:\n{deals_df.groupby(sector_col)[val_col].sum().to_string()}\n"
         
@@ -71,11 +80,11 @@ You are an expert AI Business Intelligence Agent. Answer founder-level business 
 User Question: {query}
 
 Rules:
-1. Provide a direct, factual answer first.
-2. Be extremely concise. Do not write long explanations unless the user specifically asks "why" or "explain".
-3. Use a highly professional, business-analyst tone (no fluff).
-4. If data is missing to answer the question, state exactly: "Data incomplete for this analysis."
-5. Do NOT hallucinate numbers. Use only the exact sums provided above.
+1. Provide a direct, factual answer first. Format clearly like: "Client: Name, Value: $#, Stage: Name".
+2. Be extremely concise. Do not write long generic explanations.
+3. Use a highly professional tone. No fluffy intros. 
+4. If asked about the "highest", "top", or a specific client, respond directly using the "Top 5 Deals" list provided above.
+5. If data is missing to answer the question, state exactly: "Data incomplete for this analysis."
 """
         response = llm.invoke(prompt)
         return response.content
