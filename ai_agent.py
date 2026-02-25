@@ -54,9 +54,11 @@ def ask_agent(agent_data, query):
                     deals_summary += f"- Client: {client} | Value: ${val:,.2f} | Stage: {stg} | Sector: {sect}\n"
                 
             if val_col and stage_col:
-                deals_summary += f"\n- Revenue grouped by Stage:\n{deals_df.groupby(stage_col)[val_col].sum().to_string()}\n"
+                grouped_stage = deals_df.groupby(stage_col)[val_col].sum().apply(lambda x: f"${x:,.2f}")
+                deals_summary += f"\n- Revenue grouped by Stage:\n{grouped_stage.to_string()}\n"
             if val_col and sector_col:
-                deals_summary += f"- Revenue grouped by Sector:\n{deals_df.groupby(sector_col)[val_col].sum().to_string()}\n"
+                grouped_sector = deals_df.groupby(sector_col)[val_col].sum().apply(lambda x: f"${x:,.2f}")
+                deals_summary += f"- Revenue grouped by Sector:\n{grouped_sector.to_string()}\n"
         
         wo_summary = "Work Orders Stats:\n"
         if not wo_df.empty:
@@ -80,11 +82,16 @@ You are an expert AI Business Intelligence Agent. Answer founder-level business 
 User Question: {query}
 
 Rules:
-1. Provide a direct, factual answer first. Format clearly like: "Client: Name, Value: $#, Stage: Name".
-2. Be extremely concise. Do not write long generic explanations.
-3. Use a highly professional tone. No fluffy intros. 
-4. If asked about the "highest", "top", or a specific client, respond directly using the "Top 5 Deals" list provided above.
-5. If data is missing to answer the question, state exactly: "Data incomplete for this analysis."
+1. Provide a direct, factual answer first. Format clearly.
+2. If asked to sum or show revenue across sectors, format the answer like this:
+   Sector A = $#,###
+   Sector B = $#,###
+   -------------------
+   Total Revenue = $#,###
+3. Be extremely concise. Do not write long generic explanations.
+4. Use a highly professional tone. No fluffy intros.
+5. If asked about the "highest", "top", or a specific client, respond directly using the "Top 5 Deals" list provided above.
+6. Do NOT do manual decimal math. Use the exact text/numbers provided in the summary above exactly as they appear.
 """
         response = llm.invoke(prompt)
         return response.content
