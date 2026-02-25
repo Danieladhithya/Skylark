@@ -17,11 +17,11 @@ def get_ai_agent(deals_df, wo_df):
     if not api_key:
         return None
 
-    # Using Groq's fast supported Llama 3 model (Free Tier)
+    # Using a lighter, highly available model to avoid token limits.
     try:
         llm = ChatGroq(
             temperature=0, 
-            model_name="llama-3.3-70b-versatile", 
+            model_name="llama-3.1-8b-instant", 
             groq_api_key=api_key
         )
     except Exception as e:
@@ -60,3 +60,31 @@ def ask_agent(agent, query):
         return response['output']
     except Exception as e:
         return f"🚨 Analysis Error: {str(e)}"
+
+def generate_executive_summary(metrics):
+    """Generates an executive summary using minimal tokens, bypassing the pandas agent."""
+    api_key = get_ai_key()
+    if not api_key:
+        return "⚠️ GROQ_API_KEY is missing or invalid. Please configure it in .env or Streamlit Secrets."
+        
+    try:
+        llm = ChatGroq(
+            temperature=0.2, 
+            model_name="llama-3.1-8b-instant", 
+            groq_api_key=api_key
+        )
+        
+        prompt = f"""
+        You are an AI Business Intelligence Analyst.
+        Generate a very concise 5-bullet executive Leadership Summary using this exact data:
+        Total Pipeline: {metrics.get('Total Pipeline Value', 0)}
+        Expected Revenue: {metrics.get('Expected Revenue', 0)}
+        Top Sector: {metrics.get('Top Sector', 'Unknown')}
+        Work Order Completion: {metrics.get('Work Order Completion Rate', '0%')}
+        
+        Format clearly with emojis. Do not hallucinate numbers. Identify one hypothetical operational risk based on these metrics.
+        """
+        response = llm.invoke(prompt)
+        return response.content
+    except Exception as e:
+        return f"🚨 Generation Error: {str(e)}"

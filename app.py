@@ -7,7 +7,7 @@ load_dotenv()
 
 from monday_api import fetch_board_data
 from data_processing import process_data, calculate_metrics
-from ai_agent import get_ai_agent, ask_agent
+from ai_agent import get_ai_agent, ask_agent, generate_executive_summary
 
 # Monday.com Config
 DEALS_BOARD_ID = "5026839660"
@@ -95,7 +95,11 @@ with main_col:
     query = st.text_input("Enter your business question:", placeholder="e.g. How is our pipeline looking this quarter?")
     
     if query:
-        agent = get_ai_agent(deals_df, wo_df)
+        # Pre-filter large text columns to save huge amounts of tokens
+        compact_deals = deals_df.drop(columns=[c for c in deals_df.columns if 'id' in c.lower()], errors='ignore').head(50)
+        compact_wo = wo_df.drop(columns=[c for c in wo_df.columns if 'id' in c.lower()], errors='ignore').head(50)
+        
+        agent = get_ai_agent(compact_deals, compact_wo)
         if agent:
             with st.spinner("🧠 Analyzing Monday.com Data..."):
                 answer = ask_agent(agent, query)
@@ -108,23 +112,13 @@ with side_col:
     st.subheader("📑 Quick Actions")
     if st.button("🚀 Generate Leadership Summary", type="primary", use_container_width=True):
         st.write("**Executive Summary:**")
-        if not deals_df.empty and not wo_df.empty:
-            agent = get_ai_agent(deals_df, wo_df)
-            if agent:
-                with st.spinner("Generating executive insights..."):
-                    prompt = """
-                    Generate a concise 5-bullet executive Leadership Summary using precise data:
-                    - Total pipeline value
-                    - Expected revenue
-                    - Top performing sector
-                    - Work order execution efficiency (completion rate)
-                    - Key risks (delays, incomplete data, stalled deals)
-                    Format clearly with emojis.
-                    """
-                    summary = ask_agent(agent, prompt)
+        if metrics:
+            with st.spinner("Generating executive insights..."):
+                summary = generate_executive_summary(metrics)
+                if "⚠️" in summary or "🚨" in summary:
+                    st.error(summary)
+                else:
                     st.success(summary)
-            else:
-                st.error("Groq API Key needed for AI Summary.")
         else:
             st.warning("Insufficient data to generate summary.")
 
